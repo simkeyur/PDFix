@@ -96,15 +96,29 @@
             const pdfDoc = await PDFLib.PDFDocument.load(fileData);
             const totalPages = pdfDoc.getPageCount();
         
-            for (let i = 0; i < totalPages; i++) {
-                const newPdf = await PDFLib.PDFDocument.create();
-                const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
-                newPdf.addPage(copiedPage);
+            // Ask user for page numbers
+            let pageInput = prompt(`Enter page numbers to extract (1-${totalPages}, comma-separated)`, "1,2");
+            if (!pageInput) return;
         
-                const splitPdfBytes = await newPdf.save();
-                downloadPDF(splitPdfBytes, `split_page_${i + 1}.pdf`);
+            let selectedPages = pageInput
+                .split(",")
+                .map(num => parseInt(num.trim(), 10) - 1)
+                .filter(num => num >= 0 && num < totalPages);
+        
+            if (selectedPages.length === 0) {
+                alert("Invalid page selection.");
+                return;
             }
+        
+            const newPdf = await PDFLib.PDFDocument.create();
+            const copiedPages = await newPdf.copyPages(pdfDoc, selectedPages);
+        
+            copiedPages.forEach(page => newPdf.addPage(page));
+        
+            const splitPdfBytes = await newPdf.save();
+            downloadPDF(splitPdfBytes, `split_selected_pages.pdf`);
         }
+
         
         /**
          * Convert uploaded images to a single PDF
