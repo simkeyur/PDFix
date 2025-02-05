@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Utility - Merge, Split & Convert</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Utility Tool</h1>
+        <div class="upload-area" id="uploadArea">
+            <p>Drag & Drop your PDFs or Images here</p>
+            <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.png,.gif">
+        </div>
+        <div id="filePreview"></div>
+        <button id="mergeBtn">Merge PDFs</button>
+        <button id="splitBtn">Split PDF</button>
+        <button id="convertBtn">Convert to PDF</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.16.0/pdf-lib.min.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js').then(() => {
+                console.log('Service Worker Registered');
+            });
+        }
+        
+        document.getElementById('fileInput').addEventListener('change', handleFiles);
+        document.getElementById('uploadArea').addEventListener('dragover', (event) => event.preventDefault());
+        document.getElementById('uploadArea').addEventListener('drop', handleDrop);
+        
+        function handleFiles(event) {
+            const files = event.target.files;
+            displayFiles(files);
+        }
+        
+        function handleDrop(event) {
+            event.preventDefault();
+            const files = event.dataTransfer.files;
+            displayFiles(files);
+        }
+        
+        function displayFiles(files) {
+            const filePreview = document.getElementById('filePreview');
+            filePreview.innerHTML = '';
+            Array.from(files).forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.textContent = file.name;
+                filePreview.appendChild(fileDiv);
+            });
+        }
+    </script>
+</body>
+</html>
