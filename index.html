@@ -27,30 +27,128 @@
             });
         }
         
+        document.getElementById('mergeBtn').addEventListener('click', mergePDFs);
+        document.getElementById('splitBtn').addEventListener('click', splitPDF);
+        document.getElementById('convertBtn').addEventListener('click', convertImagesToPDF);
+        
+        let uploadedFiles = [];
+        
         document.getElementById('fileInput').addEventListener('change', handleFiles);
         document.getElementById('uploadArea').addEventListener('dragover', (event) => event.preventDefault());
         document.getElementById('uploadArea').addEventListener('drop', handleDrop);
         
         function handleFiles(event) {
-            const files = event.target.files;
-            displayFiles(files);
+            uploadedFiles = Array.from(event.target.files);
+            displayFiles(uploadedFiles);
         }
         
         function handleDrop(event) {
             event.preventDefault();
-            const files = event.dataTransfer.files;
-            displayFiles(files);
+            uploadedFiles = Array.from(event.dataTransfer.files);
+            displayFiles(uploadedFiles);
         }
         
         function displayFiles(files) {
             const filePreview = document.getElementById('filePreview');
             filePreview.innerHTML = '';
-            Array.from(files).forEach(file => {
+        
+            files.forEach(file => {
                 const fileDiv = document.createElement('div');
                 fileDiv.textContent = file.name;
                 filePreview.appendChild(fileDiv);
             });
         }
+        
+        /**
+         * Merge multiple PDF files into one
+         */
+        async function mergePDFs() {
+            if (uploadedFiles.length < 2) {
+                alert("Please upload at least two PDFs to merge.");
+                return;
+            }
+        
+            const pdfDoc = await PDFLib.PDFDocument.create();
+        
+            for (let file of uploadedFiles) {
+                if (file.type !== "application/pdf") continue;
+                const fileData = await file.arrayBuffer();
+                const tempDoc = await PDFLib.PDFDocument.load(fileData);
+                const copiedPages = await pdfDoc.copyPages(tempDoc, tempDoc.getPageIndices());
+        
+                copiedPages.forEach(page => pdfDoc.addPage(page));
+            }
+        
+            const mergedPdfBytes = await pdfDoc.save();
+            downloadPDF(mergedPdfBytes, "merged.pdf");
+        }
+        
+        /**
+         * Split a PDF into individual pages
+         */
+        async function splitPDF() {
+            if (uploadedFiles.length !== 1 || uploadedFiles[0].type !== "application/pdf") {
+                alert("Please upload a single PDF to split.");
+                return;
+            }
+        
+            const fileData = await uploadedFiles[0].arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(fileData);
+            const totalPages = pdfDoc.getPageCount();
+        
+            for (let i = 0; i < totalPages; i++) {
+                const newPdf = await PDFLib.PDFDocument.create();
+                const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
+                newPdf.addPage(copiedPage);
+        
+                const splitPdfBytes = await newPdf.save();
+                downloadPDF(splitPdfBytes, `split_page_${i + 1}.pdf`);
+            }
+        }
+        
+        /**
+         * Convert uploaded images to a single PDF
+         */
+        async function convertImagesToPDF() {
+            if (uploadedFiles.length === 0) {
+                alert("Please upload images to convert.");
+                return;
+            }
+        
+            const pdfDoc = await PDFLib.PDFDocument.create();
+        
+            for (let file of uploadedFiles) {
+                if (!file.type.startsWith("image/")) continue;
+        
+                const imgData = await file.arrayBuffer();
+                let img;
+                if (file.type === "image/png") {
+                    img = await pdfDoc.embedPng(imgData);
+                } else {
+                    img = await pdfDoc.embedJpg(imgData);
+                }
+        
+                const page = pdfDoc.addPage([img.width, img.height]);
+                page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+            }
+        
+            const imagePdfBytes = await pdfDoc.save();
+            downloadPDF(imagePdfBytes, "converted_images.pdf");
+        }
+        
+        /**
+         * Helper function to download generated PDFs
+         */
+        function downloadPDF(pdfBytes, fileName) {
+            const blob = new Blob([pdfBytes], { type: "application/pdf" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
     </script>
 </body>
 </html>
